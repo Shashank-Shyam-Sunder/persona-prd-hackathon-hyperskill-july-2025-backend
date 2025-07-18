@@ -251,3 +251,11 @@ Built by Team Clouded Sky (Hackathon team name) as part of the Hyperskill AI Eng
 ## 📜 License
 
 MIT License — feel free to fork, use, and build on top of this project.
+
+---
+
+## 🙌 Want to Contribute?
+
+We welcome your suggestions and improvements!  
+Please see our [CONTRIBUTING.md](CONTRIBUTING.md) guide before making changes.
+

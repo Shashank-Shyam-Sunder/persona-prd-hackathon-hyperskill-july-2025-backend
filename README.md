@@ -73,6 +73,11 @@ persona-prd-hackathon-july-2025/
 ```
 
 ---
+## ⚙️ Environment
+
+- **Python version**: 3.12.10
+- Tested on: Windows 10 with virtualenv and Docker
+---
 
 ## 🚀 Quickstart
 

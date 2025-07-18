@@ -1,0 +1,31 @@
+# Core
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.2.0
+matplotlib>=3.7.0
+
+# NLP & Embeddings
+sentence-transformers>=2.2.0
+tqdm>=4.65.0  # required by sentence-transformers for progress bars
+
+# Clustering & Dimensionality Reduction
+umap-learn>=0.5.3
+
+# Visualization
+plotly>=5.13.0
+
+# LLM Integration
+langchain>=0.0.267
+langchain-google-genai>=0.0.5
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# Document Generation
+python-docx>=0.8.11
+
+# Excel Export Support
+openpyxl>=3.1.0
+
+# Testing
+pytest>=7.0.0

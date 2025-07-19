@@ -47,3 +47,7 @@ data/**/*.tmp
 data/**/*.bak
 data/**/*.cache
 data/**/*.old
+
+# ───────────── Docker ─────────────
+Dockerfile
+output/

@@ -81,6 +81,12 @@ persona-prd-hackathon-july-2025/
 
 ## 🚀 Quickstart
 
+0. 📥 **Clone the repository**
+```bash
+git clone https://github.com/Shashank-Shyam-Sunder/persona-prd-hackathon-hyperskill-july-2025-backend.git
+cd persona-prd-hackathon-hyperskill-july-2025-backend
+```
+
 1. 🔧 **Install requirements**
 ```bash
 python -m venv .venv

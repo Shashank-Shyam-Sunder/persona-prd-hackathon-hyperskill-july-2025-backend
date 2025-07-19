@@ -80,6 +80,8 @@ def run_pipeline(persona: str, subreddit_file: str):
     # ───────────────────────────────────────────────────────────────
     print(f"✅ Pipeline completed successfully for {persona} / {subreddit_file}")
     print(f"📁 Results saved to: {output_dir}\n")
+    # >>> ADD THIS LINE <<<
+    return output_dir, visualization_path # This returns the two values expected by api/main.py
 
 
 if __name__ == "__main__":

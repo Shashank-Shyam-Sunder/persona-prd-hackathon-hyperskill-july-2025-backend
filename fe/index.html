@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit Persona Clustering & PRD Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        h1,
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin-top: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        select,
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            margin-bottom: 10px;
+            /* Space between buttons */
+        }
+
+        button.secondary {
+            background-color: #2ecc71;
+            /* Green for PRD generation */
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button.secondary:hover {
+            background-color: #27ae60;
+        }
+
+        button:disabled {
+            background-color: #a0a0a0;
+            cursor: not-allowed;
+        }
+
+        .status-area {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #e9eff1;
+            border-left: 5px solid #3498db;
+            border-radius: 4px;
+            min-height: 100px;
+            overflow-y: auto;
+            max-height: 300px;
+            color: #333;
+        }
+
+        .status-area p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .status-area p.error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .status-area p.success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .result-link a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .result-link a:hover {
+            text-decoration: underline;
+        }
+
+        #cluster-summaries-area {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+            /* Hidden by default */
+        }
+
+        #cluster-summaries-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        #cluster-summaries-list li {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background-color: #fff;
+            display: flex;
+            /* For checkbox alignment */
+            align-items: flex-start;
+            font-size: 15px;
+        }
+
+        #cluster-summaries-list li input[type="checkbox"] {
+            margin-right: 10px;
+            margin-top: 3px;
+            /* Align checkbox with text */
+            transform: scale(1.2);
+            /* Make checkbox slightly larger */
+        }
+
+        .cluster-text {
+            flex-grow: 1;
+        }
+
+        .cluster-meta {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Reddit Persona Clustering & PRD Generator</h1>
+
+        <div class="form-group">
+            <label for="persona-select">Select Persona:</label>
+            <select id="persona-select" disabled>
+                <option value="">Loading personas...</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="subreddit-select">Select Subreddit JSON File:</label>
+            <select id="subreddit-select" disabled>
+                <option value="">Select a persona first...</option>
+            </select>
+        </div>
+
+        <button id="run-pipeline-btn">Run Pipeline</button>
+
+        <div id="pipeline-status-area" class="status-area">
+            <p><strong>Pipeline Status:</strong> Idle</p>
+        </div>
+
+        <div id="visualization-link" class="result-link" style="margin-top: 20px;">
+        </div>
+
+        <h2 id="prd-section-title" style="display: none;">Generate PRD from Selected Pain Points</h2>
+
+        <div id="cluster-summaries-area">
+            <label>Select Pain Points for PRD:</label>
+            <ul id="cluster-summaries-list">
+            </ul>
+            <button id="generate-prd-btn" class="secondary" disabled>Generate PRD</button>
+        </div>
+
+        <div id="prd-status-area" class="status-area" style="display: none;">
+            <p><strong>PRD Generation Status:</strong> Idle</p>
+        </div>
+
+        <div id="prd-download-link" class="result-link" style="margin-top: 20px;">
+        </div>
+
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000'; // Ensure this matches your FastAPI server
+
+        // UI Elements
+        const personaSelect = document.getElementById('persona-select');
+        const subredditSelect = document.getElementById('subreddit-select');
+        const runPipelineBtn = document.getElementById('run-pipeline-btn');
+        const pipelineStatusArea = document.getElementById('pipeline-status-area');
+        const visualizationLinkDiv = document.getElementById('visualization-link');
+
+        const prdSectionTitle = document.getElementById('prd-section-title');
+        const clusterSummariesArea = document.getElementById('cluster-summaries-area');
+        const clusterSummariesList = document.getElementById('cluster-summaries-list');
+        const generatePrdBtn = document.getElementById('generate-prd-btn');
+        const prdStatusArea = document.getElementById('prd-status-area');
+        const prdDownloadLinkDiv = document.getElementById('prd-download-link');
+
+        // State variables
+        let currentPipelineTaskId = null;
+        let currentPrdTaskId = null;
+        let pipelinePollingInterval = null;
+        let prdPollingInterval = null;
+        let currentPersona = null;
+        let currentSubreddit = null;
+
+        // --- Utility functions for UI updates ---
+        function appendStatus(area, message, type = '') {
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            if (type) {
+                p.classList.add(type);
+            }
+            area.appendChild(p);
+            area.scrollTop = area.scrollHeight; // Scroll to bottom
+        }
+
+        function clearStatus(area) {
+            area.innerHTML = area === pipelineStatusArea ? '<p><strong>Pipeline Status:</strong> Idle</p>' : '<p><strong>PRD Generation Status:</strong> Idle</p>';
+        }
+
+        function disablePipelineControls(disabled) {
+            personaSelect.disabled = disabled;
+            subredditSelect.disabled = disabled;
+            runPipelineBtn.disabled = disabled;
+            if (disabled) {
+                runPipelineBtn.textContent = 'Pipeline Running...';
+            } else {
+                runPipelineBtn.textContent = 'Run Pipeline';
+            }
+        }
+
+        function disablePrdControls(disabled) {
+            const checkboxes = clusterSummariesList.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.disabled = disabled);
+            generatePrdBtn.disabled = disabled;
+            if (disabled) {
+                generatePrdBtn.textContent = 'Generating PRD...';
+            } else {
+                generatePrdBtn.textContent = 'Generate PRD';
+            }
+        }
+
+        // --- API Interaction Functions ---
+
+        async function fetchAvailablePersonas() {
+            appendStatus(pipelineStatusArea, 'Fetching available personas...');
+            try {
+                const response = await fetch(`${API_BASE_URL}/available_personas/`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                personaSelect.innerHTML = ''; // Clear loading message
+                if (data.personas && data.personas.length > 0) {
+                    data.personas.forEach(persona => {
+                        const option = document.createElement('option');
+                        option.value = persona;
+                        option.textContent = persona;
+                        personaSelect.appendChild(option);
+                    });
+                    appendStatus(pipelineStatusArea, `Found ${data.personas.length} personas.`, 'success');
+                    personaSelect.disabled = false;
+                    // Trigger subreddit fetch for the first persona by default
+                    if (personaSelect.value) {
+                        fetchAvailableSubreddits(personaSelect.value);
+                    }
+                } else {
+                    personaSelect.innerHTML = '<option value="">No personas found</option>';
+                    appendStatus(pipelineStatusArea, 'No personas found. Check persona_config.py', 'error');
+                }
+            } catch (error) {
+                console.error('Error fetching personas:', error);
+                appendStatus(pipelineStatusArea, `Failed to load personas: ${error.message}. Is the backend running?`, 'error');
+                personaSelect.innerHTML = '<option value="">Error loading personas</option>';
+            }
+        }
+
+        async function fetchAvailableSubreddits(personaKey) {
+            appendStatus(pipelineStatusArea, `Fetching subreddits for ${personaKey}...`);
+            subredditSelect.innerHTML = '<option value="">Loading subreddits...</option>';
+            subredditSelect.disabled = true;
+            runPipelineBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/available_subreddits/${personaKey}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json(); // This API returns a list of strings directly
+                subredditSelect.innerHTML = ''; // Clear loading message
+                if (data && data.length > 0) {
+                    data.forEach(subreddit => {
+                        const option = document.createElement('option');
+                        option.value = subreddit;
+                        option.textContent = subreddit;
+                        subredditSelect.appendChild(option);
+                    });
+                    appendStatus(pipelineStatusArea, `Found ${data.length} subreddits for ${personaKey}.`, 'success');
+                    subredditSelect.disabled = false;
+                    runPipelineBtn.disabled = false;
+                } else {
+                    subredditSelect.innerHTML = '<option value="">No subreddits found</option>';
+                    appendStatus(pipelineStatusArea, `No subreddits found for ${personaKey}. Check data/raw structure.`, 'error');
+                }
+            } catch (error) {
+                console.error('Error fetching subreddits:', error);
+                appendStatus(pipelineStatusArea, `Failed to load subreddits: ${error.message}.`, 'error');
+                subredditSelect.innerHTML = '<option value="">Error loading subreddits</option>';
+            }
+        }
+
+        async function triggerPipeline(persona, subreddit) {
+            clearStatus(pipelineStatusArea);
+            visualizationLinkDiv.innerHTML = '';
+            clusterSummariesArea.style.display = 'none'; // Hide PRD section
+            prdSectionTitle.style.display = 'none';
+            prdStatusArea.style.display = 'none';
+            prdDownloadLinkDiv.innerHTML = '';
+            clearStatus(prdStatusArea);
+
+            appendStatus(pipelineStatusArea, `Sending request to start pipeline for persona: ${persona}, subreddit: ${subreddit}...`);
+            disablePipelineControls(true);
+            disablePrdControls(true); // Disable PRD controls while pipeline runs
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/run_pipeline/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ persona, subreddit }),
+                });
+
+                if (response.status === 202) {
+                    const data = await response.json();
+                    currentPipelineTaskId = data.task_id;
+                    currentPersona = persona; // Store current persona/subreddit for PRD step
+                    currentSubreddit = subreddit;
+                    appendStatus(pipelineStatusArea, `Pipeline triggered! Task ID: ${currentPipelineTaskId}`, 'success');
+                    appendStatus(pipelineStatusArea, `Expected output: /data/processed/${data.expected_output_directory_hint}`);
+                    startPollingPipelineStatus(currentPipelineTaskId);
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(`Failed to trigger pipeline: ${errorData.detail || response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Error triggering pipeline:', error);
+                appendStatus(pipelineStatusArea, `Error triggering pipeline: ${error.message}`, 'error');
+                disablePipelineControls(false);
+                disablePrdControls(false);
+            }
+        }
+
+        async function checkPipelineStatus(taskId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/pipeline_status/${taskId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                appendStatus(pipelineStatusArea, `Status: ${data.status}`);
+
+                if (data.status === 'completed') {
+                    clearInterval(pipelinePollingInterval);
+                    appendStatus(pipelineStatusArea, 'Pipeline completed successfully!', 'success');
+                    if (data.visualization_path) {
+                        const vizLink = document.createElement('a');
+                        vizLink.href = `${API_BASE_URL}${data.visualization_path}`;
+                        vizLink.target = "_blank";
+                        vizLink.textContent = "Open Interactive Visualization";
+                        visualizationLinkDiv.innerHTML = '<h4>Results:</h4>';
+                        visualizationLinkDiv.appendChild(vizLink);
+                        appendStatus(pipelineStatusArea, 'Visualization link generated.', 'success');
+                    } else {
+                        appendStatus(pipelineStatusArea, 'Pipeline completed, but no visualization path was returned.', 'error');
+                    }
+                    disablePipelineControls(false); // Re-enable main controls
+                    // Now, enable and load cluster summaries for PRD generation
+                    await loadClusterSummaries(currentPersona, currentSubreddit);
+                    prdSectionTitle.style.display = 'block';
+                    clusterSummariesArea.style.display = 'block';
+                    generatePrdBtn.disabled = false;
+                } else if (data.status === 'failed') {
+                    clearInterval(pipelinePollingInterval);
+                    appendStatus(pipelineStatusArea, `Pipeline failed: ${data.error}`, 'error');
+                    disablePipelineControls(false); // Re-enable main controls
+                    disablePrdControls(true); // Keep PRD controls disabled
+                }
+            } catch (error) {
+                console.error('Error checking pipeline status:', error);
+                clearInterval(pipelinePollingInterval);
+                appendStatus(pipelineStatusArea, `Error checking pipeline status: ${error.message}`, 'error');
+                disablePipelineControls(false);
+                disablePrdControls(true);
+            }
+        }
+
+        function startPollingPipelineStatus(taskId) {
+            pipelinePollingInterval = setInterval(() => checkPipelineStatus(taskId), 3000);
+        }
+
+        async function loadClusterSummaries(persona, subreddit) {
+            clusterSummariesList.innerHTML = '<p>Loading cluster summaries...</p>';
+            try {
+                const response = await fetch(`${API_BASE_URL}/cluster_summaries/${persona}/${subreddit}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                clusterSummariesList.innerHTML = ''; // Clear loading message
+
+                if (data.summaries && data.summaries.length > 0) {
+                    data.summaries.forEach(summary => {
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `
+                            <input type="checkbox" id="cluster-${summary.cluster_id}" value="${summary.cluster_id}">
+                            <div class="cluster-text">
+                                <label for="cluster-${summary.cluster_id}"><strong>Cluster ${summary.cluster_id + 1}:</strong> ${summary.pain_point_summary}</label>
+                                <div class="cluster-meta">(${summary.num_posts} posts)</div>
+                            </div>
+                        `;
+                        clusterSummariesList.appendChild(listItem);
+                    });
+                    appendStatus(pipelineStatusArea, `Loaded ${data.summaries.length} cluster summaries.`, 'success');
+                    generatePrdBtn.disabled = false;
+                } else {
+                    clusterSummariesList.innerHTML = '<p>No cluster summaries found. Did the pipeline run correctly?</p>';
+                    generatePrdBtn.disabled = true;
+                    appendStatus(pipelineStatusArea, 'No cluster summaries found.', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading cluster summaries:', error);
+                clusterSummariesList.innerHTML = `<p class="error">Error loading cluster summaries: ${error.message}</p>`;
+                generatePrdBtn.disabled = true;
+                appendStatus(pipelineStatusArea, `Failed to load cluster summaries: ${error.message}`, 'error');
+            }
+        }
+
+        async function triggerPrdGeneration() {
+            const selectedClusterIds = Array.from(clusterSummariesList.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(cb => parseInt(cb.value));
+
+            if (selectedClusterIds.length === 0) {
+                alert('Please select at least one cluster to generate a PRD.');
+                return;
+            }
+
+            clearStatus(prdStatusArea);
+            prdDownloadLinkDiv.innerHTML = '';
+            prdStatusArea.style.display = 'block';
+            appendStatus(prdStatusArea, `Sending request to generate PRD for clusters: ${selectedClusterIds.map(id => id + 1).join(', ')}...`);
+            disablePrdControls(true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/generate_prd/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        persona: currentPersona,
+                        subreddit: currentSubreddit,
+                        selected_cluster_ids: selectedClusterIds
+                    }),
+                });
+
+                if (response.status === 202) {
+                    const data = await response.json();
+                    currentPrdTaskId = data.prd_task_id;
+                    appendStatus(prdStatusArea, `PRD generation triggered! Task ID: ${currentPrdTaskId}`, 'success');
+                    startPollingPrdStatus(currentPrdTaskId);
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(`Failed to trigger PRD generation: ${errorData.detail || response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Error triggering PRD generation:', error);
+                appendStatus(prdStatusArea, `Error triggering PRD generation: ${error.message}`, 'error');
+                disablePrdControls(false);
+            }
+        }
+
+        async function checkPrdStatus(prdTaskId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/prd_status/${prdTaskId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                appendStatus(prdStatusArea, `Status: ${data.status}`);
+
+                if (data.status === 'completed') {
+                    clearInterval(prdPollingInterval);
+                    appendStatus(prdStatusArea, 'PRD generated successfully!', 'success');
+                    if (data.prd_path) {
+                        const prdLink = document.createElement('a');
+                        prdLink.href = `${API_BASE_URL}${data.prd_path}`;
+                        prdLink.target = "_blank";
+                        prdLink.textContent = "Download Generated PRD (.docx)";
+                        prdDownloadLinkDiv.innerHTML = '<h4>PRD Document:</h4>';
+                        prdDownloadLinkDiv.appendChild(prdLink);
+                        appendStatus(prdStatusArea, 'PRD download link generated.', 'success');
+                    } else {
+                        appendStatus(prdStatusArea, 'PRD completed, but no document path was returned.', 'error');
+                    }
+                    disablePrdControls(false); // Re-enable PRD controls
+                } else if (data.status === 'failed') {
+                    clearInterval(prdPollingInterval);
+                    appendStatus(prdStatusArea, `PRD generation failed: ${data.error}`, 'error');
+                    disablePrdControls(false); // Re-enable PRD controls
+                }
+            } catch (error) {
+                console.error('Error checking PRD status:', error);
+                clearInterval(prdPollingInterval);
+                appendStatus(prdStatusArea, `Error checking PRD status: ${error.message}`, 'error');
+                disablePrdControls(false);
+            }
+        }
+
+        function startPollingPrdStatus(prdTaskId) {
+            prdPollingInterval = setInterval(() => checkPrdStatus(prdTaskId), 3000);
+        }
+
+        // --- Event Listeners ---
+        personaSelect.addEventListener('change', (event) => {
+            const selectedPersona = event.target.value;
+            if (selectedPersona) {
+                fetchAvailableSubreddits(selectedPersona);
+            } else {
+                subredditSelect.innerHTML = '<option value="">Select a persona first...</option>';
+                subredditSelect.disabled = true;
+                runPipelineBtn.disabled = true;
+            }
+            // Clear previous results/status on persona change
+            clearStatus(pipelineStatusArea);
+            clearStatus(prdStatusArea);
+            visualizationLinkDiv.innerHTML = '';
+            prdDownloadLinkDiv.innerHTML = '';
+            clusterSummariesArea.style.display = 'none';
+            prdSectionTitle.style.display = 'none';
+        });
+
+        runPipelineBtn.addEventListener('click', () => {
+            const selectedPersona = personaSelect.value;
+            const selectedSubreddit = subredditSelect.value;
+
+            if (!selectedPersona) {
+                alert('Please select a persona.');
+                return;
+            }
+            if (!selectedSubreddit) {
+                alert('Please select a subreddit JSON file.');
+                return;
+            }
+            triggerPipeline(selectedPersona, selectedSubreddit);
+        });
+
+        generatePrdBtn.addEventListener('click', triggerPrdGeneration);
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', fetchAvailablePersonas);
+    </script>
+</body>
+
+</html>

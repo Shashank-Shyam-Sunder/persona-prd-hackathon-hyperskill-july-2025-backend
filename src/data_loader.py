@@ -57,6 +57,8 @@ def list_available_subreddits(persona: str):
     if not folder_name:
         raise ValueError(f"Unknown persona key: {persona}")
     folder_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "raw", "starter_datasets", folder_name))
+    print(f"DEBUG: data_loader.py attempting to access folder: {folder_path}") 
+
     if not os.path.exists(folder_path):
         raise FileNotFoundError(f"Persona folder not found: {folder_path}")
 

@@ -1,0 +1,53 @@
+# ───────────── Environment & Secrets ─────────────
+.env
+.venv/
+.envrc
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ───────────── Python Bytecode ─────────────
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ───────────── System & Editor Specific ─────────────
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# ───────────── Pytest & Coverage ─────────────
+.pytest_cache/
+.cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ───────────── Build Artifacts ─────────────
+*.egg
+*.egg-info/
+dist/
+build/
+develop-eggs/
+.eggs/
+.installed.cfg
+MANIFEST
+
+# ───────────── Project-Specific ─────────────
+experiments/
+clean_folder_structure.txt
+generate_root_folder_tree.py
+
+# ───────────── Data Folder Cleanup ─────────────
+data/**/*.log
+data/**/*.tmp
+data/**/*.bak
+data/**/*.cache
+data/**/*.old
+
+# ───────────── Docker ─────────────
+Dockerfile
+output/

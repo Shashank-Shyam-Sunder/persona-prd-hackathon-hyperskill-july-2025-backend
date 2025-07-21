@@ -1,0 +1,36 @@
+# Core Python Libraries
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.2.0
+matplotlib>=3.7.0
+
+# Clustering & Dimensionality Reduction
+umap-learn>=0.5.3
+
+# NLP & Embeddings
+sentence-transformers>=2.2.0
+tqdm>=4.65.0  # used by sentence-transformers
+
+# LLM Integration
+openai>=1.0.0
+langchain>=0.0.267
+langchain-google-genai>=0.0.5
+
+# FastAPI Web Server
+fastapi>=0.100.0
+uvicorn>=0.22.0
+httpx>=0.24.0  # used for async HTTP if needed
+python-multipart>=0.0.6
+pydantic>=2.0.0
+typing-extensions>=4.6.0
+python-dotenv>=1.0.0
+
+# File & Document Handling
+python-docx>=0.8.11
+openpyxl>=3.1.0  # for Excel export
+
+# Interactive Visualization
+plotly>=5.13.0
+
+# Testing
+pytest>=7.0.0

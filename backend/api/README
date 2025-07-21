@@ -1,0 +1,9 @@
+run the api in the be directoryu:
+
+/.venv/bin/python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+to run the FE:
+in the fe directory run: python3 -m http.server 8001
+
+open web browser:
+http://localhost:8001/index.html
